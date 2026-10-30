@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aventura Musical: Las Figuras Musicales</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts & FontAwesome -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            fredoka: ['"Fredoka One"', 'cursive'],
+            quicksand: ['"Quicksand"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              purple: '#7C3AED',
+              pink: '#EC4899',
+              yellow: '#F59E0B',
+              cyan: '#06B6D4',
+              green: '#10B981',
+              dark: '#1E1B4B'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Quicksand', sans-serif;
+      background: linear-gradient(135deg, #2e1065 0%, #4c1d95 50%, #1e1b4b 100%);
+      min-height: 100vh;
+      color: #f8fafc;
+      overflow-x: hidden;
+    }
+
+    .font-title {
+      font-family: 'Fredoka One', cursive;
+    }
+
+    /* Target animations */
+    .shake {
+      animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+    }
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-2px, 0, 0); }
+      20%, 80% { transform: translate3d(4px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+      40%, 60% { transform: translate3d(6px, 0, 0); }
+    }
+
+    .bounce-match {
+      animation: bounceMatch 0.6s ease-in-out;
+    }
+    @keyframes bounceMatch {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15) rotate(3deg); }
+    }
+
+    /* Flip Card Styles */
+    .perspective-1000 {
+      perspective: 1000px;
+    }
+    .transform-style-3d {
+      transform-style: preserve-3d;
+    }
+    .backface-hidden {
+      backface-visibility: hidden;
+    }
+    .rotate-y-180 {
+      transform: rotateY(180deg);
+    }
+
+    /* Card active outline */
+    .card-selected {
+      box-shadow: 0 0 20px #f59e0b, 0 0 10px #f59e0b;
+      transform: translateY(-4px) scale(1.02);
+    }
+
+    /* Floating notes background effect */
+    .bg-note {
+      position: absolute;
+      color: rgba(255, 255, 255, 0.05);
+      user-select: none;
+      pointer-events: none;
+      animation: floatNote 12s infinite linear;
+    }
+    @keyframes floatNote {
+      0% { transform: translateY(105vh) rotate(0deg); }
+      100% { transform: translateY(-10vh) rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="relative flex flex-col justify-between min-h-screen p-3 md:p-6">
+
+  <!-- Background Animated Notes -->
+  <div id="notes-bg" class="fixed inset-0 overflow-hidden pointer-events-none z-0"></div>
+
+  <!-- Header / Navigation Bar -->
+  <header class="relative z-10 w-full max-w-5xl mx-auto flex flex-wrap justify-between items-center gap-4 bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/20 shadow-xl">
+    <div class="flex items-center gap-3 cursor-pointer" onclick="goHome()">
+      <div class="bg-gradient-to-tr from-yellow-400 to-pink-500 p-3 rounded-2xl shadow-lg text-white text-2xl">
+        <i class="fa-solid font-bold fa-music"></i>
+      </div>
+      <div>
+        <h1 class="font-title text-2xl md:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-cyan-300">
+          RitmoLandia
+        </h1>
+        <p class="text-xs text-purple-200">Aprende Teoría Musical Jugando</p>
+      </div>
+    </div>
+
+    <!-- HUD Indicators -->
+    <div id="hud" class="hidden flex flex-wrap items-center gap-3 md:gap-6 bg-black/30 px-4 py-2 rounded-2xl border border-white/10 text-sm md:text-base">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-star text-yellow-400"></i>
+        <span id="score-val" class="font-bold text-yellow-300">0</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-fire text-orange-500"></i>
+        <span id="streak-val" class="font-bold text-orange-400">0x</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-clock text-cyan-400"></i>
+        <span id="timer-val" class="font-bold text-cyan-300">00:00</span>
+      </div>
+      <button id="sound-btn" onclick="toggleSound()" class="text-purple-200 hover:text-white transition p-1">
+        <i class="fa-solid fa-volume-high text-lg"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="relative z-10 w-full max-w-5xl mx-auto my-auto py-6">
+
+    <!-- MENU PRINCIPAL -->
+    <section id="screen-home" class="flex flex-col items-center text-center space-y-8 py-8">
+      <div class="space-y-3 max-w-2xl">
+        <span class="bg-purple-500/30 text-purple-200 text-xs font-semibold uppercase tracking-widest px-4 py-1.5 rounded-full border border-purple-400/30">
+          Aventura Didáctica
+        </span>
+        <h2 class="font-title text-4xl md:text-6xl text-white drop-shadow-lg">
+          ¡Domina las <span class="text-yellow-400">Figuras Musicales</span>!
+        </h2>
+        <p class="text-purple-200 text-base md:text-lg">
+          Explora los nombres, ritmos, duraciones y silencios. ¡Demuestra cuánto sabes en los dos modos interactivos!
+        </p>
+      </div>
+
+      <!-- Mode Selector Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
+        <!-- Modo 1 -->
+        <div onclick="startGame('matching')" class="group cursor-pointer bg-gradient-to-br from-purple-800/80 to-indigo-900/80 hover:from-purple-700 hover:to-indigo-800 border-2 border-purple-400/30 hover:border-yellow-400 p-6 rounded-3xl transition-all duration-300 transform hover:-translate-y-2 shadow-2xl flex flex-col items-center justify-between text-center relative overflow-hidden">
+          <div class="absolute -top-12 -right-12 w-32 h-32 bg-purple-500/20 rounded-full blur-2xl group-hover:bg-yellow-500/20 transition"></div>
+          <div class="w-20 h-20 bg-purple-600/50 rounded-2xl flex items-center justify-center text-4xl mb-4 text-yellow-300 group-hover:scale-110 transition">
+            <i class="fa-solid fa-puzzle-piece"></i>
+          </div>
+          <h3 class="font-title text-2xl text-white mb-2">Modo Emparejar</h3>
+          <p class="text-purple-200 text-sm mb-6">Encuentra las parejas correspondientes entre las figuras, sus nombres y sus tiempos.</p>
+          <span class="w-full py-3 bg-yellow-400 hover:bg-yellow-300 text-purple-950 font-title rounded-xl shadow-lg transition">¡Jugar Ahora!</span>
+        </div>
+
+        <!-- Modo 2 -->
+        <div onclick="startGame('quiz')" class="group cursor-pointer bg-gradient-to-br from-pink-900/80 to-purple-900/80 hover:from-pink-800 hover:to-purple-800 border-2 border-pink-400/30 hover:border-cyan-400 p-6 rounded-3xl transition-all duration-300 transform hover:-translate-y-2 shadow-2xl flex flex-col items-center justify-between text-center relative overflow-hidden">
+          <div class="absolute -top-12 -right-12 w-32 h-32 bg-pink-500/20 rounded-full blur-2xl group-hover:bg-cyan-500/20 transition"></div>
+          <div class="w-20 h-20 bg-pink-600/50 rounded-2xl flex items-center justify-center text-4xl mb-4 text-cyan-300 group-hover:scale-110 transition">
+            <i class="fa-solid fa-brain"></i>
+          </div>
+          <h3 class="font-title text-2xl text-white mb-2">Desafío Cuestionario</h3>
+          <p class="text-purple-200 text-sm mb-6">Responde a preguntas de opción múltiple para probar tus conocimientos de teoría musical.</p>
+          <span class="w-full py-3 bg-cyan-400 hover:bg-cyan-300 text-purple-950 font-title rounded-xl shadow-lg transition">¡Empezar Examen!</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANTALLA: MODO EMPAREJAR -->
+    <section id="screen-matching" class="hidden space-y-6">
+      <div class="flex flex-col md:flex-row justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/10 gap-3">
+        <div>
+          <h2 class="font-title text-xl md:text-2xl text-yellow-300">Empareja los Conceptos</h2>
+          <p class="text-xs md:text-sm text-purple-200">Haz clic en una tarjeta y luego en su pareja exacta (Figura ↔ Nombre/Duración).</p>
+        </div>
+        <button onclick="goHome()" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-xs font-semibold rounded-xl transition border border-white/20">
+          <i class="fa-solid fa-house mr-1"></i> Menú
+        </button>
+      </div>
+
+      <!-- Tablero de Cartas -->
+      <div id="matching-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4">
+        <!-- Generado dinámicamente -->
+      </div>
+    </section>
+
+    <!-- PANTALLA: MODO CUESTIONARIO -->
+    <section id="screen-quiz" class="hidden max-w-2xl mx-auto space-y-6">
+      <!-- Progress Bar -->
+      <div class="w-full bg-black/40 rounded-full h-3 p-0.5 border border-white/10 overflow-hidden">
+        <div id="quiz-progress" class="bg-gradient-to-r from-cyan-400 to-pink-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+      </div>
+
+      <div class="bg-gradient-to-b from-purple-900/90 to-slate-900/90 border border-purple-400/30 rounded-3xl p-6 md:p-8 shadow-2xl relative">
+        <div class="flex justify-between items-center mb-4">
+          <span id="quiz-step" class="text-xs font-bold text-cyan-300 uppercase tracking-widest bg-cyan-950/60 px-3 py-1 rounded-full border border-cyan-500/30">Pregunta 1 de 8</span>
+          <span id="quiz-category" class="text-xs text-purple-300">Valor / Duración</span>
+        </div>
+
+        <!-- Question text -->
+        <h3 id="quiz-question" class="font-title text-xl md:text-2xl text-white mb-6">
+          Cargando pregunta...
+        </h3>
+
+        <!-- Illustration container (if available) -->
+        <div id="quiz-image-container" class="my-4 flex justify-center bg-black/20 p-4 rounded-2xl border border-white/5 min-h-[100px] items-center">
+          <!-- SVG dinámico -->
+        </div>
+
+        <!-- Options Container -->
+        <div id="quiz-options" class="grid grid-cols-1 gap-3 mt-6">
+          <!-- Opciones dinámicas -->
+        </div>
+      </div>
+    </section>
+
+    <!-- PANTALLA: RESULTADOS -->
+    <section id="screen-results" class="hidden text-center max-w-lg mx-auto bg-slate-900/90 border-2 border-yellow-400/40 p-8 rounded-3xl shadow-2xl space-y-6 relative overflow-hidden backdrop-blur-xl">
+      <div class="space-y-2">
+        <h2 id="result-title" class="font-title text-3xl md:text-4xl text-yellow-300">¡Fantástico Trabajo!</h2>
+        <p id="result-subtitle" class="text-purple-200 text-sm">Has completado el desafío musical.</p>
+      </div>
+
+      <!-- Stars Display -->
+      <div id="stars-container" class="flex justify-center gap-3 text-4xl text-yellow-400">
+        <i class="fa-solid fa-star transition-all duration-500 transform scale-110"></i>
+        <i class="fa-solid fa-star transition-all duration-500 transform scale-110"></i>
+        <i class="fa-solid fa-star transition-all duration-500 transform scale-110"></i>
+      </div>
+
+      <!-- Scoreboard details -->
+      <div class="bg-black/40 rounded-2xl p-4 grid grid-cols-3 gap-2 border border-white/10 text-center">
+        <div>
+          <p class="text-xs text-purple-300">Puntaje</p>
+          <p id="res-score" class="font-title text-2xl text-yellow-300">0</p>
+        </div>
+        <div>
+          <p class="text-xs text-purple-300">Aciertos</p>
+          <p id="res-accuracy" class="font-title text-2xl text-green-400">0/0</p>
+        </div>
+        <div>
+          <p class="text-xs text-purple-300">Tiempo</p>
+          <p id="res-time" class="font-title text-2xl text-cyan-300">0s</p>
+        </div>
+      </div>
+
+      <!-- Summary Message -->
+      <p id="result-feedback" class="text-sm bg-purple-900/50 p-3 rounded-xl border border-purple-400/20 text-purple-100">
+        ¡Demostraste un gran conocimiento sobre los ritmos y las notas!
+      </p>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-3 justify-center pt-2">
+        <button onclick="restartCurrentGame()" class="flex-1 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-purple-950 font-title rounded-xl shadow-lg transition">
+          <i class="fa-solid fa-rotate-right mr-1"></i> Reintentar
+        </button>
+        <button onclick="goHome()" class="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white font-title rounded-xl transition border border-white/20">
+          <i class="fa-solid fa-house mr-1"></i> Inicio
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="relative z-10 text-center py-4 text-xs text-purple-300/60">
+    Aventura Educativa Musical &bull; Las Figuras Musicales y sus Silencios
+  </footer>
+
+  <!-- Confetti Canvas -->
+  <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
+
+  <!-- JAVASCRIPT INTEGRADO -->
+  <script>
+    /* ==========================================================================
+       1. VECTORS SVG DE FIGURAS Y SILENCIOS MUSICALES
+       ========================================================================== */
+    const MUSIC_SVGS = {
+      redonda: `<svg viewBox="0 0 100 100" class="w-16 h-16 fill-current"><ellipse cx="50" cy="50" rx="30" ry="20" transform="rotate(-20 50 50)" stroke="currentColor" stroke-width="8" fill="none"/></svg>`,
+      blanca: `<svg viewBox="0 0 100 100" class="w-16 h-16 fill-current"><g transform="rotate(-20 40 60)"><ellipse cx="40" cy="60" rx="18" ry="12" stroke="currentColor" stroke-width="7" fill="none"/><line x1="56" y1="58" x2="56" y2="-10" stroke="currentColor" stroke-width="7" stroke-linecap="round"/></g></svg>`,
+      negra: `<svg viewBox="0 0 100 100" class="w-16 h-16 fill-current"><g transform="rotate(-20 40 60)"><ellipse cx="40" cy="60" rx="18" ry="12" fill="currentColor"/><line x1="56" y1="58" x2="56" y2="-10" stroke="currentColor" stroke-width="7" stroke-linecap="round"/></g></svg>`,
+      corchea: `<svg viewBox="0 0 100 100" class="w-16 h-16 fill-current"><g transform="rotate(-20 35 65)"><ellipse cx="35" cy="65" rx="16" ry="11" fill="currentColor"/><line x1="50" y1="63" x2="50" y2="-5" stroke="currentColor" stroke-width="7" stroke-linecap="round"/><path d="M50 -5 Q 75 10 70 30" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round"/></g></svg>`,
+      semicorchea: `<svg viewBox="0 0 100 100" class="w-16 h-16 fill-current"><g transform="rotate(-20 35 65)"><ellipse cx="35" cy="65" rx="16" ry="11" fill="currentColor"/><line x1="50" y1="63" x2="50" y2="-5" stroke="currentColor" stroke-width="7" stroke-linecap="round"/><path d="M50 -5 Q 75 10 70 30" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><path d="M50 15 Q 75 30 70 50" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></g></svg>`,
+      
+      // Silencios
+      silencio_redonda: `<svg viewBox="0 0 100 100" class="w-16 h-16 fill-current"><line x1="10" y1="40" x2="90" y2="40" stroke="currentColor" stroke-width="6"/><rect x="30" y="40" width="40" height="20" fill="currentColor"/></svg>`,
+      silencio_blanca: `<svg viewBox="0 0 100 100" class="w-16 h-16 fill-current"><line x1="10" y1="60" x2="90" y2="60" stroke="currentColor" stroke-width="6"/><rect x="30" y="40" width="40" height="20" fill="currentColor"/></svg>`,
+      silencio_negra: `<svg viewBox="0 0 100 100" class="w-16 h-16 fill-current"><path d="M 45 15 L 60 35 L 40 55 L 55 70 Q 30 80 40 90" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+      silencio_corchea: `<svg viewBox="0 0 100 100" class="w-16 h-16 fill-current"><circle cx="40" cy="35" r="7" fill="currentColor"/><path d="M 42 37 Q 60 25 50 65 L 42 85" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></svg>`
+    };
+
+    /* ==========================================================================
+       2. BASE DE DATOS EDUCATIVA
+       ========================================================================== */
+    const MUSICAL_DATA = [
+      { id: 'redonda', name: 'Redonda', duration: '4 Tiempos', svg: MUSIC_SVGS.redonda, silenceSvg: MUSIC_SVGS.silencio_redonda, silenceName: 'Silencio de Redonda' },
+      { id: 'blanca', name: 'Blanca', duration: '2 Tiempos', svg: MUSIC_SVGS.blanca, silenceSvg: MUSIC_SVGS.silencio_blanca, silenceName: 'Silencio de Blanca' },
+      { id: 'negra', name: 'Negra', duration: '1 Tiempo', svg: MUSIC_SVGS.negra, silenceSvg: MUSIC_SVGS.silencio_negra, silenceName: 'Silencio de Negra' },
+      { id: 'corchea', name: 'Corchea', duration: '1/2 Tiempo', svg: MUSIC_SVGS.corchea, silenceSvg: MUSIC_SVGS.silencio_corchea, silenceName: 'Silencio de Corchea' },
+      { id: 'semicorchea', name: 'Semicorchea', duration: '1/4 Tiempo', svg: MUSIC_SVGS.semicorchea, silenceSvg: MUSIC_SVGS.semicorchea, silenceName: 'Silencio de Semicorchea' }
+    ];
+
+    const QUIZ_QUESTIONS = [
+      {
+        question: "¿Cuántos tiempos de duración tiene la figura 'Redonda'?",
+        svg: MUSIC_SVGS.redonda,
+        options: ["1 Tiempo", "2 Tiempos", "4 Tiempos", "1/2 Tiempo"],
+        correct: 2,
+        category: "Duración"
+      },
+      {
+        question: "¿Cuál es el nombre de esta figura musical?",
+        svg: MUSIC_SVGS.negra,
+        options: ["Blanca", "Negra", "Corchea", "Redonda"],
+        correct: 1,
+        category: "Identificación"
+      },
+      {
+        question: "¿Cuánto dura el silencio de Negra?",
+        svg: MUSIC_SVGS.silencio_negra,
+        options: ["1 Tiempo", "2 Tiempos", "4 Tiempos", "1/2 Tiempo"],
+        correct: 0,
+        category: "Silencios"
+      },
+      {
+        question: "¿Qué figura musical equivale a medio (1/2) tiempo?",
+        svg: MUSIC_SVGS.corchea,
+        options: ["Negra", "Semicorchea", "Corchea", "Blanca"],
+        correct: 2,
+        category: "Valores"
+      },
+      {
+        question: "Si sumamos dos Negras (1 + 1), ¿a qué figura equivale su duración total?",
+        svg: null,
+        options: ["Una Redonda (4 tiempos)", "Una Blanca (2 tiempos)", "Una Corchea (1/2 tiempo)", "Dos Corcheas"],
+        correct: 1,
+        category: "Suma de Tiempos"
+      },
+      {
+        question: "¿A cuál figura corresponde este silencio colgado debajo de la línea?",
+        svg: MUSIC_SVGS.silencio_redonda,
+        options: ["Silencio de Blanca", "Silencio de Negra", "Silencio de Redonda", "Silencio de Corchea"],
+        correct: 2,
+        category: "Silencios"
+      },
+      {
+        question: "¿Cuántas Corcheas (1/2 tiempo cada una) necesitas para igualar 1 Blanca (2 tiempos)?",
+        svg: null,
+        options: ["2 Corcheas", "4 Corcheas", "8 Corcheas", "3 Corcheas"],
+        correct: 1,
+        category: "Equivalencias"
+      },
+      {
+        question: "¿Cuál de estas figuras dura menos tiempo?",
+        svg: MUSIC_SVGS.semicorchea,
+        options: ["Blanca", "Negra", "Corchea", "Semicorchea"],
+        correct: 3,
+        category: "Comparación"
+      }
+    ];
+
+    /* ==========================================================================
+       3. SINTETIZADOR DE SONIDO (Web Audio API)
+       ========================================================================== */
+    class SoundEffects {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+      }
+
+      playTone(freq, type = 'sine', duration = 0.2, delay = 0) {
+        if (this.muted) return;
+        this.init();
+        
+        setTimeout(() => {
+          try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            
+            gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+            
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            
+            osc.start();
+            osc.stop(this.ctx.currentTime + duration);
+          } catch(e) {}
+        }, delay * 1000);
+      }
+
+      playSuccess() {
+        // Arpegio victorioso brillante
+        this.playTone(523.25, 'triangle', 0.15, 0.0); // C5
+        this.playTone(659.25, 'triangle', 0.15, 0.08); // E5
+        this.playTone(783.99, 'triangle', 0.15, 0.16); // G5
+        this.playTone(1046.50, 'sine', 0.3, 0.24);  // C6
+      }
+
+      playError() {
+        // Tonos graves disonantes
+        this.playTone(180, 'sawtooth', 0.2, 0);
+        this.playTone(140, 'sawtooth', 0.25, 0.1);
+      }
+
+      playSelect() {
+        this.playTone(440, 'sine', 0.08, 0);
+      }
+
+      playFanfare() {
+        const notes = [523.25, 659.25, 783.99, 1046.50, 880, 1046.50];
+        notes.forEach((freq, idx) => {
+          this.playTone(freq, 'triangle', 0.25, idx * 0.12);
+        });
+      }
+    }
+
+    const sound = new SoundEffects();
+
+    function toggleSound() {
+      sound.muted = !sound.muted;
+      const btn = document.getElementById('sound-btn');
+      btn.innerHTML = sound.muted 
+        ? `<i class="fa-solid fa-volume-xmark text-red-400 text-lg"></i>`
+        : `<i class="fa-solid fa-volume-high text-lg"></i>`;
+    }
+
+    /* ==========================================================================
+       4. ESTADO DE LA APLICACIÓN Y JUEGO
+       ========================================================================== */
+    let currentGameMode = null; // 'matching' | 'quiz'
+    let score = 0;
+    let streak = 0;
+    let timerInterval = null;
+    let secondsElapsed = 0;
+    let totalQuestionsOrMatches = 0;
+    let correctAnswersCount = 0;
+
+    // Estado Modo Emparejar
+    let matchingSelectedCard = null;
+    let matchingMatchesFound = 0;
+    let matchingTotalPairs = 0;
+
+    // Estado Modo Cuestionario
+    let quizCurrentIdx = 0;
+
+    /* ==========================================================================
+       5. NAVEGACIÓN Y CONTROL GENERAL
+       ========================================================================== */
+    function goHome() {
+      stopTimer();
+      hideAllScreens();
+      document.getElementById('screen-home').classList.remove('hidden');
+      document.getElementById('hud').classList.add('hidden');
+    }
+
+    function hideAllScreens() {
+      ['screen-home', 'screen-matching', 'screen-quiz', 'screen-results'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+    }
+
+    function startGame(mode) {
+      sound.init();
+      sound.playSelect();
+      currentGameMode = mode;
+      score = 0;
+      streak = 0;
+      secondsElapsed = 0;
+      correctAnswersCount = 0;
+      
+      updateHUD();
+      document.getElementById('hud').classList.remove('hidden');
+      startTimer();
+
+      hideAllScreens();
+      if (mode === 'matching') {
+        setupMatchingGame();
+        document.getElementById('screen-matching').classList.remove('hidden');
+      } else if (mode === 'quiz') {
+        setupQuizGame();
+        document.getElementById('screen-quiz').classList.remove('hidden');
+      }
+    }
+
+    function restartCurrentGame() {
+      if (currentGameMode) startGame(currentGameMode);
+    }
+
+    function startTimer() {
+      stopTimer();
+      secondsElapsed = 0;
+      timerInterval = setInterval(() => {
+        secondsElapsed++;
+        const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+        const secs = String(secondsElapsed % 60).padStart(2, '0');
+        document.getElementById('timer-val').textContent = `${mins}:${secs}`;
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+    }
+
+    function updateHUD() {
+      document.getElementById('score-val').textContent = score;
+      document.getElementById('streak-val').textContent = `${streak}x`;
+    }
+
+    function addScore(points) {
+      const multiplier = 1 + Math.floor(streak / 3) * 0.5;
+      score += Math.round(points * multiplier);
+      streak++;
+      updateHUD();
+    }
+
+    function resetStreak() {
+      streak = 0;
+      updateHUD();
+    }
+
+    /* ==========================================================================
+       6. LÓGICA MODO EMPAREJAR (MATCHING)
+       ========================================================================== */
+    function setupMatchingGame() {
+      matchingSelectedCard = null;
+      matchingMatchesFound = 0;
+      
+      // Seleccionar 6 conceptos de la base
+      const selectedItems = MUSICAL_DATA.slice(0, 6);
+      matchingTotalPairs = selectedItems.length;
+      totalQuestionsOrMatches = matchingTotalPairs;
+
+      // Crear cartas A (Figura SVG) y cartas B (Nombre + Tiempo)
+      let cards = [];
+      selectedItems.forEach(item => {
+        // Carta A: Imagen Visual
+        cards.push({
+          pairId: item.id,
+          type: 'visual',
+          content: item.svg,
+          label: 'Figura'
+        });
+        // Carta B: Texto Educativo
+        cards.push({
+          pairId: item.id,
+          type: 'text',
+          content: `<div class="font-title text-lg text-yellow-300 mb-1">${item.name}</div><div class="text-xs bg-purple-950/80 px-2 py-1 rounded text-cyan-200 border border-purple-400/30">${item.duration}</div>`,
+          label: 'Info'
+        });
+      });
+
+      // Mezclar cartas
+      cards.sort(() => Math.random() - 0.5);
+
+      // Renderizar Tablero
+      const grid = document.getElementById('matching-grid');
+      grid.innerHTML = '';
+
+      cards.forEach((card, index) => {
+        const cardEl = document.createElement('div');
+        cardEl.className = `card-item bg-gradient-to-b from-purple-900/80 to-slate-900/90 border-2 border-purple-400/30 hover:border-yellow-400 rounded-2xl p-4 flex flex-col items-center justify-center min-h-[130px] md:min-h-[150px] cursor-pointer transition-all duration-300 text-center relative shadow-lg select-none`;
+        cardEl.dataset.index = index;
+        cardEl.dataset.pairId = card.pairId;
+
+        cardEl.innerHTML = `
+          <span class="absolute top-2 left-2 text-[10px] uppercase font-bold text-purple-300/60 bg-black/30 px-1.5 py-0.5 rounded">${card.label}</span>
+          <div class="my-auto flex items-center justify-center text-cyan-300">
+            ${card.content}
+          </div>
+        `;
+
+        cardEl.addEventListener('click', () => handleMatchingClick(cardEl));
+        grid.appendChild(cardEl);
+      });
+    }
+
+    function handleMatchingClick(cardEl) {
+      if (cardEl.classList.contains('matched') || cardEl === matchingSelectedCard) return;
+
+      sound.playSelect();
+
+      if (!matchingSelectedCard) {
+        // Primera selección
+        matchingSelectedCard = cardEl;
+        cardEl.classList.add('card-selected');
+      } else {
+        // Segunda selección - Comprobar pareja
+        const prevCard = matchingSelectedCard;
+        matchingSelectedCard = null;
+
+        if (prevCard.dataset.pairId === cardEl.dataset.pairId) {
+          // ¡Acierto!
+          sound.playSuccess();
+          addScore(100);
+          correctAnswersCount++;
+          matchingMatchesFound++;
+
+          prevCard.classList.remove('card-selected');
+          prevCard.classList.add('matched', 'bg-green-900/40', 'border-green-400', 'bounce-match', 'opacity-60');
+          cardEl.classList.add('matched', 'bg-green-900/40', 'border-green-400', 'bounce-match', 'opacity-60');
+
+          if (matchingMatchesFound === matchingTotalPairs) {
+            setTimeout(endGame, 800);
+          }
+        } else {
+          // ¡Error!
+          sound.playError();
+          resetStreak();
+
+          cardEl.classList.add('card-selected', 'border-red-500', 'shake');
+          prevCard.classList.add('border-red-500', 'shake');
+
+          setTimeout(() => {
+            prevCard.classList.remove('card-selected', 'border-red-500', 'shake');
+            cardEl.classList.remove('card-selected', 'border-red-500', 'shake');
+          }, 600);
+        }
+      }
+    }
+
+    /* ==========================================================================
+       7. LÓGICA MODO CUESTIONARIO (QUIZ)
+       ========================================================================== */
+    function setupQuizGame() {
+      quizCurrentIdx = 0;
+      totalQuestionsOrMatches = QUIZ_QUESTIONS.length;
+      renderQuizQuestion();
+    }
+
+    function renderQuizQuestion() {
+      const q = QUIZ_QUESTIONS[quizCurrentIdx];
+      
+      // Actualizar Barra de Progreso
+      const progressPct = ((quizCurrentIdx) / QUIZ_QUESTIONS.length) * 100;
+      document.getElementById('quiz-progress').style.width = `${progressPct}%`;
+
+      document.getElementById('quiz-step').textContent = `Pregunta ${quizCurrentIdx + 1} de ${QUIZ_QUESTIONS.length}`;
+      document.getElementById('quiz-category').textContent = q.category;
+      document.getElementById('quiz-question').textContent = q.question;
+
+      // Renderizar Ilustración SVG
+      const imgContainer = document.getElementById('quiz-image-container');
+      if (q.svg) {
+        imgContainer.innerHTML = `<div class="text-yellow-400">${q.svg}</div>`;
+        imgContainer.classList.remove('hidden');
+      } else {
+        imgContainer.innerHTML = '';
+        imgContainer.classList.add('hidden');
+      }
+
+      // Renderizar Opciones
+      const optionsContainer = document.getElementById('quiz-options');
+      optionsContainer.innerHTML = '';
+
+      q.options.forEach((optText, idx) => {
+        const btn = document.createElement('button');
+        btn.className = `w-full text-left p-4 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 hover:border-yellow-400/60 font-semibold text-white transition-all flex items-center gap-3 group`;
+        btn.innerHTML = `
+          <span class="w-8 h-8 rounded-xl bg-purple-900/80 group-hover:bg-yellow-400 group-hover:text-purple-950 flex items-center justify-center font-title text-sm transition">
+            ${String.fromCharCode(65 + idx)}
+          </span>
+          <span class="text-sm md:text-base">${optText}</span>
+        `;
+        btn.onclick = () => handleQuizAnswer(idx, btn);
+        optionsContainer.appendChild(btn);
+      });
+    }
+
+    function handleQuizAnswer(selectedIndex, btnEl) {
+      const q = QUIZ_QUESTIONS[quizCurrentIdx];
+      const allBtns = document.getElementById('quiz-options').children;
+
+      // Deshabilitar todos los botones para evitar clicks múltiples
+      for (let btn of allBtns) {
+        btn.disabled = true;
+      }
+
+      if (selectedIndex === q.correct) {
+        // Correcto
+        sound.playSuccess();
+        addScore(150);
+        correctAnswersCount++;
+        btnEl.classList.remove('bg-white/5');
+        btnEl.classList.add('bg-green-600/60', 'border-green-400', 'bounce-match');
+      } else {
+        // Incorrecto
+        sound.playError();
+        resetStreak();
+        btnEl.classList.remove('bg-white/5');
+        btnEl.classList.add('bg-red-600/60', 'border-red-400', 'shake');
+
+        // Mostrar cuál era la correcta
+        allBtns[q.correct].classList.add('bg-green-600/40', 'border-green-400');
+      }
+
+      // Avanzar a la siguiente pregunta
+      setTimeout(() => {
+        quizCurrentIdx++;
+        if (quizCurrentIdx < QUIZ_QUESTIONS.length) {
+          renderQuizQuestion();
+        } else {
+          document.getElementById('quiz-progress').style.width = '100%';
+          endGame();
+        }
+      }, 1200);
+    }
+
+    /* ==========================================================================
+       8. PANTALLA FINAL Y CELEBRACIÓN (RESULTADOS)
+       ========================================================================== */
+    function endGame() {
+      stopTimer();
+      sound.playFanfare();
+      hideAllScreens();
+
+      const resultsScreen = document.getElementById('screen-results');
+      resultsScreen.classList.remove('hidden');
+
+      // Calcular desempeño
+      const pct = (correctAnswersCount / totalQuestionsOrMatches) * 100;
+      
+      document.getElementById('res-score').textContent = score;
+      document.getElementById('res-accuracy').textContent = `${correctAnswersCount}/${totalQuestionsOrMatches}`;
+      document.getElementById('res-time').textContent = `${secondsElapsed}s`;
+
+      const titleEl = document.getElementById('result-title');
+      const feedbackEl = document.getElementById('result-feedback');
+      const starsContainer = document.getElementById('stars-container');
+
+      let starsCount = 1;
+      if (pct >= 80) starsCount = 3;
+      else if (pct >= 50) starsCount = 2;
+
+      // Renderizar Estrellas
+      starsContainer.innerHTML = '';
+      for (let i = 0; i < 3; i++) {
+        const star = document.createElement('i');
+        if (i < starsCount) {
+          star.className = 'fa-solid fa-star text-yellow-400 transform scale-110 transition-all';
+        } else {
+          star.className = 'fa-regular fa-star text-slate-600';
+        }
+        starsContainer.appendChild(star);
+      }
+
+      // Mensajes contextuales
+      if (pct === 100) {
+        titleEl.textContent = '¡Maestro del Ritmo!';
+        feedbackEl.textContent = '¡Increíble! Respondiste todo a la perfección. Conoces las figuras musicales como un verdadero músico profesional.';
+      } else if (pct >= 70) {
+        titleEl.textContent = '¡Sobresaliente!';
+        feedbackEl.textContent = '¡Muy buen trabajo! Tienes muy claros los valores y duraciones de las figuras musicales.';
+      } else {
+        titleEl.textContent = '¡Sigue Practicando!';
+        feedbackEl.textContent = '¡Buen intento! Repasa los tiempos de las figuras y vuelve a intentarlo para conseguir las 3 estrellas.';
+      }
+
+      // Lanzar animación de Confeti
+      launchConfetti();
+    }
+
+    /* ==========================================================================
+       9. EFECTO DE CONFETI EN CANVAS
+       ========================================================================== */
+    function launchConfetti() {
+      const canvas = document.getElementById('confetti-canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const particles = [];
+      const colors = ['#f59e0b', '#ec4899', '#06b6d4', '#10b981', '#a855f7'];
+
+      for (let i = 0; i < 120; i++) {
+        particles.push({
+          x: canvas.width / 2,
+          y: canvas.height / 2,
+          vx: (Math.random() - 0.5) * 18,
+          vy: (Math.random() - 0.7) * 18,
+          size: Math.random() * 8 + 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          rotation: Math.random() * 360,
+          rotSpeed: (Math.random() - 0.5) * 10,
+          gravity: 0.25,
+          opacity: 1
+        });
+      }
+
+      let animationFrame;
+      function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        let activeParticles = 0;
+        particles.forEach(p => {
+          if (p.opacity > 0) {
+            activeParticles++;
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += p.gravity;
+            p.rotation += p.rotSpeed;
+            p.opacity -= 0.008;
+
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate((p.rotation * Math.PI) / 180);
+            ctx.globalAlpha = Math.max(0, p.opacity);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+            ctx.restore();
+          }
+        });
+
+        if (activeParticles > 0) {
+          animationFrame = requestAnimationFrame(render);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      render();
+    }
+
+    /* ==========================================================================
+       10. FONDO CON NOTAS FLOTANTES Y SETUP INICIAL
+       ========================================================================== */
+    function createFloatingNotes() {
+      const container = document.getElementById('notes-bg');
+      const icons = ['fa-music', 'fa-note-sticky', 'fa-play'];
+      
+      for (let i = 0; i < 15; i++) {
+        const note = document.createElement('i');
+        note.className = `fa-solid ${icons[i % icons.length]} bg-note`;
+        note.style.left = `${Math.random() * 100}%`;
+        note.style.fontSize = `${Math.random() * 24 + 16}px`;
+        note.style.animationDuration = `${Math.random() * 8 + 8}s`;
+        note.style.animationDelay = `${Math.random() * 5}s`;
+        container.appendChild(note);
+      }
+    }
+
+    window.onload = function() {
+      createFloatingNotes();
+    };
+
+    // Ajuste responsivo de Canvas
+    window.addEventListener('resize', () => {
+      const canvas = document.getElementById('confetti-canvas');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+  </script>
+</body>
+</html>
